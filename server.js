@@ -8,7 +8,8 @@ const server = http.createServer(app);
 // For multiple specific origins
 const io = socketIo(server, {
   cors: {
-    origin: ["http://stocky.test", "http://localhost:8080"],
+    // origin: ["http://stocky.test", "http://localhost:8080", "http://192.168.1.*"],
+    origin: "*", // Allow all origins 
     methods: ["GET", "POST"]
   }
 });
@@ -76,6 +77,8 @@ app.get('/', (req, res) => {
 
 // Start server
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Server listening at http://localhost:${PORT}`);
+const HOST = '0.0.0.0'; // Listen on all network interfaces
+server.listen(PORT, HOST, () => {
+    console.log(`Server listening at http://localhost:${PORT}`);
+    console.log(`Accessible via public IP at http://<your-public-ip>:${PORT}`);
 });
