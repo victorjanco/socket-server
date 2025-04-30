@@ -1,26 +1,38 @@
-const express = require('express');
+const fs = require('fs');
+const https = require('https');
 const http = require('http');
+const express = require('express');
 const socketIo = require('socket.io');
 const path = require('path');
 
 const app = express();
-const server = http.createServer(app);
-// For multiple specific origins
-const io = socketIo(server, {
-  cors: {
-    // origin: ["http://stocky.test", "http://localhost:8080", "http://192.168.1.*"],
-    origin: "*", // Allow all origins 
-    methods: ["GET", "POST"]
-  }
-});
 
-// Or for all origins (not recommended for production)
-// const io = socketIo(server, {
-//   cors: {
-//     origin: "*",
-//     methods: ["GET", "POST"]
-//   }
-// });
+// Environment configuration
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Create server based on environment
+let server;
+if (isProduction) {
+    const options = {
+      key: fs.readFileSync('claveprivadakey.pem'),
+      cert: fs.readFileSync('certificado.pem')
+    };
+     server = https.createServer(app);
+    //server = https.createServer(options, app);
+} else {
+    server = http.createServer(app);
+}
+
+// Socket.io configuration
+const io = socketIo(server, {
+    cors: {
+        origin: isProduction
+            ? ["*"] // Production origins
+            : ["http://stocky.test", "http://localhost:8080", "http://192.168.1.*"], // Development origins
+        methods: ["GET", "POST"],
+        allowedHeaders: ["Referer"]
+    }
+});
 
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
@@ -44,6 +56,13 @@ io.on('connection', (socket) => {
   socket.on('send-message', (message) => {
     const username = users[socket.id] || 'Anonymous';
     io.emit('receive-message', { username, message });
+    console.log(`Message from ${username}: ${message}`);
+  });
+
+  // Event for chat messages
+  socket.on('new-order', (message) => {
+    const username = users[socket.id] || 'Anonymous';
+    io.emit('receive-order', { username, message });
     console.log(`Message from ${username}: ${message}`);
   });
 
@@ -77,8 +96,15 @@ app.get('/', (req, res) => {
 
 // Start server
 const PORT = process.env.PORT || 3000;
-const HOST = '0.0.0.0'; // Listen on all network interfaces
+const HOST = '0.0.0.0';
 server.listen(PORT, HOST, () => {
-    console.log(`Server listening at http://localhost:${PORT}`);
-    console.log(`Accessible via public IP at http://<your-public-ip>:${PORT}`);
+  const networkInterfaces = require('os').networkInterfaces();
+  const ipv4 = Object.values(networkInterfaces)
+      .flat()
+      .find(i => i.family === 'IPv4' && !i.internal)?.address;
+
+  console.log(`Server listening at ${isProduction ? 'https' : 'http'}://localhost:${PORT}`);
+  if (!isProduction) {
+      console.log(`Accessible via network at http://${ipv4}:${PORT}`);
+  }
 });
