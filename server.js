@@ -17,8 +17,8 @@ if (isProduction) {
       key: fs.readFileSync('claveprivadakey.pem'),
       cert: fs.readFileSync('certificado.pem')
     };
-     server = https.createServer(app);
-    //server = https.createServer(options, app);
+    // server = https.createServer(app);
+    server = https.createServer(options, app);
 } else {
     server = http.createServer(app);
 }
