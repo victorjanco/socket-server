@@ -1,78 +1,46 @@
 @echo off
-:: npm_verification_and_setup.bat
-:: Standalone script for npm verification and project initialization
+:: Script optimizado para instalar dependencias npm
+:: Versión 1.1 - Corregido y mejorado
 
-echo Verifying npm and setting up project...
-echo.
-
-:: ==============================================
-:: NPM VERIFICATION SECTION
-:: ==============================================
-
-:: First try with default PATH
-npm -v >nul 2>&1
-if %errorlevel% equ 0 (
-    echo npm is available in PATH.
-    goto PROJECT_SETUP
-)
-
-:: Try with explicit Program Files path
-"%ProgramFiles%\nodejs\npm" -v >nul 2>&1
-if %errorlevel% equ 0 (
-    echo Found npm in Program Files.
-    set "PATH=%PATH%;%ProgramFiles%\nodejs"
-    goto PROJECT_SETUP
-)
-
-:: Check alternative install location
-if exist "%LocalAppData%\Programs\nodejs\npm.cmd" (
-    echo Found npm in Local AppData.
-    set "PATH=%PATH%;%LocalAppData%\Programs\nodejs"
-    goto PROJECT_SETUP
-)
-
-:: Final error if all checks fail
-echo [ERROR] npm could not be found. Solutions:
-echo 1. RESTART YOUR COMPUTER (required after Node.js installation)
-echo 2. Manually verify Node.js installation:
-echo    - Check if this folder exists: "C:\Program Files\nodejs"
-echo    - If missing, reinstall Node.js
-echo 3. Add to PATH manually:
-echo    - Win+R → sysdm.cpl → Advanced → Environment Variables
-echo    - Edit Path → Add: "C:\Program Files\nodejs"
-pause
-exit /b
-
-:: ==============================================
-:: PROJECT SETUP SECTION
-:: ==============================================
-:PROJECT_SETUP
-
-:: Create project directory if missing
-if not exist "c:\horno\socket-server\" (
-    echo Creating project directory...
-    mkdir "c:\horno\socket-server"
-)
-
-:: Navigate to project
-cd /d "c:\horno\socket-server" || (
-    echo [ERROR] Failed to access project directory
+:: 1. Verificar Node.js instalado
+where node >nul 2>&1 || (
+    echo [ERROR] Node.js no está instalado o no está en el PATH
+    echo Descargue Node.js desde: https://nodejs.org/
     pause
-    exit /b
+    exit /b 1
 )
 
-:: Install packages
-echo Installing npm packages...
-call npm install
-if %errorlevel% neq 0 (
-    echo [ERROR] npm install failed. Possible causes:
-    echo - Missing package.json in "c:\horno\socket-server"
-    echo - No internet connection
-    echo - Permission issues (try running as Admin)
+:: 2. Verificar directorio del proyecto
+cd /d "c:\horno\socket-server" 2>nul || (
+    echo [ERROR] Directorio no encontrado: c:\horno\socket-server
+    echo Cree el directorio primero o verifique la ruta
     pause
-    exit /b
+    exit /b 1
 )
 
+:: 3. Verificar package.json
+if not exist "package.json" (
+    echo [ERROR] No se encontró package.json en el directorio
+    echo Ejecute 'npm init' primero o copie un package.json válido
+    pause
+    exit /b 1
+)
+
+:: 4. Instalar dependencias
+echo [INFO] Instalando dependencias con npm...
+npm install
+
+if errorlevel 1 (
+    echo [ERROR] Fallo en npm install
+    echo Posibles soluciones:
+    echo 1. Verifique su conexión a internet
+    echo 2. Ejecute como Administrador
+    echo 3. Elimine node_modules e intente nuevamente
+    pause
+    exit /b 1
+)
+
+echo [ÉXITO] Dependencias instaladas correctamente
+echo Directorio: %CD%
 echo.
-echo Project setup complete! Start with: npm start
 pause
