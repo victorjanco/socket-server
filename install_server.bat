@@ -16,7 +16,7 @@ if %errorlevel% equ 0 (
 )
 
 :: Navigate to project directory
-cd /d "c:\laragon\www\socket-server-main"
+cd /d "c:\horno\socket-server"
 
 :: Install npm packages
 echo Installing npm packages...
