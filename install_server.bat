@@ -9,7 +9,7 @@ if %errorlevel% equ 0 (
 ) else (
     echo Installing Node.js...
     
-    :: Download Node.js (using bitsadmin if curl isn't available)
+    :: Download Node.js
     bitsadmin /transfer "NodeDownload" /download /priority high ^
     https://nodejs.org/dist/v18.16.1/node-v18.16.1-x64.msi ^
     "%TEMP%\node-installer.msi"
@@ -18,36 +18,47 @@ if %errorlevel% equ 0 (
     start /wait msiexec /i "%TEMP%\node-installer.msi" /quiet /norestart
     del "%TEMP%\node-installer.msi"
     
-    :: Manually add to PATH (temporary for this session)
-    set "PATH=%PATH%;%ProgramFiles%\nodejs"
+    :: Force-update PATH for current session
+    for %%i in ("%ProgramFiles%\nodejs") do set "NODE_PATH=%%~fi"
+    set "PATH=%PATH%;%NODE_PATH%"
     echo Node.js installation complete.
 )
 
-:: Verify npm
-where npm >nul 2>&1
+:: Verify npm (now using full path to avoid PATH issues)
+"%ProgramFiles%\nodejs\npm" -v >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [ERROR] npm still not available. Possible solutions:
-    echo 1. Restart your computer to update system PATH
-    echo 2. Run this script as Administrator
-    echo 3. Manually add "%ProgramFiles%\nodejs" to your PATH
-    pause
-    exit /b
+    echo [ERROR] npm still not available. Trying last-resort fixes...
+    
+    :: Check alternative install paths
+    if exist "%LocalAppData%\Programs\nodejs\npm.cmd" (
+        set "NODE_PATH=%LocalAppData%\Programs\nodejs"
+        set "PATH=%PATH%;%NODE_PATH%"
+    )
+    
+    :: Final verification
+    "%ProgramFiles%\nodejs\npm" -v >nul 2>&1
+    if %errorlevel% neq 0 (
+        echo [FINAL ERROR] npm could not be found. Solutions:
+        echo 1. RESTART YOUR COMPUTER (required to update PATH)
+        echo 2. Manually add Node.js to PATH:
+        echo    - Press Win+R → type `sysdm.cpl` → Advanced → Environment Variables
+        echo    - Edit "Path" → Add: "C:\Program Files\nodejs"
+        pause
+        exit /b
+    )
 )
 
-:: Project directory setup
-if not exist "c:\horno\socket-server\" (
-    mkdir "c:\horno\socket-server"
-)
-cd /d "c:\horno\socket-server"
+:: Project setup
+if not exist "c:\horno\socket-server\" mkdir "c:\horno\socket-server"
+cd /d "c:\horno\socket-server" || exit /b
 
-:: Install packages
+:: Install packages (using full npm path)
 echo Installing npm packages...
-npm install
+"%ProgramFiles%\nodejs\npm" install
 if %errorlevel% neq 0 (
     echo [ERROR] npm install failed. Check:
-    echo - package.json exists in this directory
-    echo - Internet connection is available
-    echo - Run as Administrator if needed
+    echo - Is there a package.json in "c:\horno\socket-server"?
+    echo - Is your internet connection working?
     pause
     exit /b
 )
